@@ -9,50 +9,36 @@ import paddle.nn.functional as F
 
 # local
 import ivy
-from ivy.func_wrapper import with_unsupported_dtypes
+from ivy.func_wrapper import with_unsupported_device_and_dtypes
 from . import backend_version
 
+unsupported_dtypes = [
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "uint8",
+    "float16",
+    "complex64",
+    "complex128",
+    "bool",
+]
+default_float = ivy.default_float_dtype()
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def relu(x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None) -> paddle.Tensor:
-
+    if ivy.as_ivy_dtype(x.dtype) in unsupported_dtypes:
+        if paddle.is_complex(x):
+            return F.relu(x.real()) + 1j * F.relu(x.imag())
+        return F.relu(x.cast(default_float)).cast(x.dtype)
     return F.relu(x)
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def leaky_relu(
     x: paddle.Tensor,
@@ -61,27 +47,17 @@ def leaky_relu(
     alpha: float = 0.2,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-
+    if ivy.as_ivy_dtype(x.dtype) in unsupported_dtypes:
+        if paddle.is_complex(x):
+            return F.leaky_relu(x.real(), negative_slope=alpha) + 1j * F.leaky_relu(
+                x.imag(), negative_slope=alpha
+            )
+        return F.leaky_relu(x.cast(default_float), negative_slope=alpha).cast(x.dtype)
     return F.leaky_relu(x, negative_slope=alpha)
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def gelu(
     x: paddle.Tensor,
@@ -90,52 +66,32 @@ def gelu(
     approximate: bool = False,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-
+    if ivy.as_ivy_dtype(x.dtype) in unsupported_dtypes:
+        if paddle.is_complex(x):
+            if approximate:
+                return (
+                    0.5 * x * (1 + ivy.tanh(0.7978845608 * (x + 0.044715 * x * x * x)))
+                )
+            return 0.5 * x * (1 + ivy.erf(x / ivy.sqrt(2)))
+        return F.gelu(x.cast(default_float), approximate=approximate).cast(x.dtype)
     return F.gelu(x, approximate=approximate)
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def sigmoid(
     x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None
 ) -> paddle.Tensor:
-
+    if ivy.as_ivy_dtype(x.dtype) in unsupported_dtypes:
+        if paddle.is_complex(x):
+            return 1 / (1 + ivy.exp(x))
+        return F.sigmoid(x.cast(default_float)).cast(x.dtype)
     return F.sigmoid(x)
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def softmax(
     x: paddle.Tensor,
@@ -146,26 +102,12 @@ def softmax(
 ) -> paddle.Tensor:
     if axis is None:
         axis = -1
-    return F.softmax(x, axis=axis)
+    exp_x = ivy.exp(ivy.array(x) - ivy.max(x, axis=axis, keepdims=True))
+    return ivy.divide(exp_x, ivy.sum(exp_x, axis=axis, keepdims=True))
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def softplus(
     x: paddle.Tensor,
@@ -175,30 +117,27 @@ def softplus(
     threshold: Optional[Union[int, float]] = None,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-
-    threshold = threshold if threshold is not None else 20
-    beta = beta if beta is not None else 1
-
-    return F.softplus(x, beta=beta, threshold=threshold)
-
-
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
+    if beta is not None and beta != 1:
+        x_beta = x * beta
+        res = (
+            ivy.add(
+                ivy.log1p(ivy.exp(-ivy.abs(x_beta))),
+                ivy.maximum(x_beta, 0),
+            )
+        ) / beta
+    else:
+        x_beta = x
+        res = ivy.add(
+            ivy.log1p(ivy.exp(-ivy.abs(x_beta))),
+            ivy.maximum(x_beta, 0),
         )
-    },
-    backend_version,
+    if threshold is not None:
+        return ivy.where(x_beta > threshold, x, res).astype(x.dtype)
+    return res.astype(x.dtype)
+
+
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def log_softmax(
     x: paddle.Tensor,
@@ -207,29 +146,26 @@ def log_softmax(
     axis: Optional[int] = None,
     out: Optional[paddle.Tensor] = None,
 ):
-    if axis is None:
-        axis = -1
-    return F.log_softmax(x, axis=axis)
+    x = ivy.array(x)
+    x_max = ivy.max(x, axis=axis, keepdims=True)
+    if x_max.ndim > 0:
+        x_max[~ivy.isfinite(x_max)] = 0
+    elif not ivy.isfinite(x_max):
+        x_max = 0
+    exp_tmp = ivy.exp(x - x_max)
+
+    s = ivy.sum(exp_tmp, axis=axis, keepdims=True)
+    ret = ivy.log(s)
+    ret = x - x_max - ret
+    return ret
 
 
-@with_unsupported_dtypes(
-    {
-        "2.4.2 and below": (
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "uint8",
-            "uint16",
-            "bfloat16",
-            "float16",
-            "complex64",
-            "complex128",
-            "bool",
-        )
-    },
-    backend_version,
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def mish(x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None) -> paddle.Tensor:
-
+    if ivy.as_ivy_dtype(x.dtype) in unsupported_dtypes:
+        if paddle.is_complex(x):
+            return x * ivy.tanh(ivy.log1p(ivy.exp(x)))
+        return F.mish(x.cast(default_float)).cast(x.dtype)
     return F.mish(x)
