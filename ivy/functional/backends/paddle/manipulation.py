@@ -296,13 +296,13 @@ def repeat(
     axis: int = None,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    #if isinstance(repeats, Number) and repeats == 0:
-        #return paddle.to_tensor([], dtype=x.dtype)
-    #elif isinstance(repeats, paddle.Tensor):
-        #if max(repeats.shape) == 1:
-            #repeats = repeats.item()
-            #if repeats == 0:
-                #return paddle.to_tensor([], dtype=x.dtype)
+    if isinstance(repeats, Number) and repeats == 0:
+        return paddle.to_tensor([], dtype=x.dtype)
+    elif isinstance(repeats, paddle.Tensor):
+        if max(repeats.shape) == 1:
+            repeats = repeats.item()
+            if repeats == 0:
+                return paddle.to_tensor([], dtype=x.dtype)
 
     if x.dtype in [
         paddle.int8,
