@@ -13,8 +13,11 @@ from ivy.utils.exceptions import IvyNotImplementedException
 from ivy.func_wrapper import with_unsupported_device_and_dtypes
 from . import backend_version
 import multiprocessing as _multiprocessing
+from .elementwise import _elementwise_helper
 
-
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
+)
 def is_native_array(x, /, *, exclusive=False):
     if isinstance(x, paddle.Tensor):
         if exclusive and not x.stop_gradient:
@@ -23,9 +26,11 @@ def is_native_array(x, /, *, exclusive=False):
     return False
 
 
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
+)
 def array_equal(x0: paddle.Tensor, x1: paddle.Tensor, /) -> bool:
-    x0, x1 = ivy.promote_types_of_inputs(x0, x1)
-    return bool(paddle.equal_all(x0, x1))
+    return bool(ivy.all(ivy.equal(x0, x1)))
 
 
 def container_types():
@@ -86,7 +91,7 @@ def to_numpy(
     {"2.4.2 and below": {"cpu": ("uint16", "bfloat16")}}, backend_version
 )
 def to_scalar(x: paddle.Tensor, /) -> Number:
-    if isinstance(x, Number):
+    if isinstance(x, (Number,complex)):
         return x
     return x.item()
 
@@ -133,7 +138,7 @@ def gather_nd(
 def get_num_dims(
     x: paddle.Tensor, /, *, as_array: bool = False
 ) -> Union[paddle.Tensor, int]:
-    return paddle.to_tensor(x.ndims) if as_array else x.ndims
+    return paddle.to_tensor(x.ndim) if as_array else x.ndim
 
 
 def inplace_arrays_supported():
