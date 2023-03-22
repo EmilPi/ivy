@@ -165,37 +165,33 @@ def matrix_norm(
 
     if ord == -float("inf"):
         ret = paddle.min(
-            paddle.sum(paddle.abs(x), axis=axis[1], keepdim=True), axis=axis
+            paddle.sum(paddle.abs(x), axis=axis[1], keepdim=True), axis=axis, keepdim=keepdims
         )
 
     elif ord == -1:
         ret = paddle.min(
-            paddle.sum(paddle.abs(x), axis=axis[0], keepdim=True), axis=axis
+            paddle.sum(paddle.abs(x), axis=axis[0], keepdim=True), axis=axis, keepdim=keepdims
         )
     elif ord == -2:
         ret = paddle.min(paddle.linalg.svd(x)[1], axis=axis, keepdim=keepdims)
     elif ord == "nuc":
-        if paddle.shape(x).numpy() == 0:
+        if x.size == 0:
             ret = x
         else:
-            ret = paddle.sum(paddle.linalg.svd(x)[0], axis=-1)
+            ret = paddle.sum(paddle.linalg.svd(x)[1], axis=-1, keepdim=keepdims)
     elif ord == "fro":
         ret = paddle.linalg.norm(x, p=ord, axis=axis, keepdim=keepdims)
     elif ord == float("inf"):
         ret = paddle.max(
-            paddle.sum(paddle.abs(x), axis=axis[1], keepdim=True), axis=axis
+            paddle.sum(paddle.abs(x), axis=axis[1], keepdim=True), axis=axis, keepdim=keepdims
         )
 
     elif ord == 1:
         ret = paddle.max(
-            paddle.sum(paddle.abs(x), axis=axis[0], keepdim=True), axis=axis
+            paddle.sum(paddle.abs(x), axis=axis[0], keepdim=True), axis=axis, keepdim=keepdims
         )
     elif ord == 2:
-        ret = paddle.max(paddle.linalg.svd(x)[1], axis=axis, keepdim=keepdims)
-    if keepdims:
-        ret = paddle.reshape(ret, x.shape[:-2] + [1, 1])
-    else:
-        ret = paddle.reshape(ret, x.shape[:-2])
+        ret = paddle.max(paddle.linalg.svd(x)[1].unsqueeze(-1), axis=axis[1], keepdim=keepdims)
     if _expand_dims:
         ret = paddle.squeeze(ret, axis=0)
     return ret
@@ -490,7 +486,21 @@ def vector_norm(
     dtype: Optional[paddle.dtype] = None,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    return paddle.norm(x, p=ord, axis=axis, keepdim=keepdims).astype(dtype)
+    ret_scalar = False
+    dtype = dtype if dtype is not None else x.dtype
+    if x.ndim == 0:
+        x = ivy.to_native(ivy.expand_dims(x,axis=0))
+        ret_scalar = True
+    
+    if x.dtype in [paddle.int8, paddle.int16, paddle.int32, paddle.int64, paddle.uint8, paddle.float16, paddle.complex64, paddle.complex128, paddle.bool]:
+        if paddle.is_complex(x):
+            x = ivy.to_native(ivy.abs(x))
+            ret = paddle.norm(x, p=ord, axis=axis, keepdim=keepdims).astype(dtype)
+        else:
+            ret = paddle.norm(x.cast(ivy.default_float_dtype()), p=ord, axis=axis, keepdim=keepdims).astype(dtype)
+    else:
+        ret = paddle.norm(x, p=ord, axis=axis, keepdim=keepdims).astype(dtype)
+    return ivy.squeeze(ret,axis=-1) if ret_scalar else ret
 
 
 # Extra #
