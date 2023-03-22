@@ -146,7 +146,7 @@ def asarray(
     elif isinstance(obj, (Number, bool, complex)):
         if dtype is None:
             dtype = ivy.promote_types(type(obj), type(obj))
-        ret = paddle.to_tensor(obj,dtype=dtype).squeeze()
+        ret = paddle.to_tensor(obj).squeeze().cast(dtype)
         return ret
 
     else:
