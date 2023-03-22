@@ -143,10 +143,10 @@ def asarray(
     elif isinstance(obj, np.ndarray) and dtype is None:
         dtype = ivy.as_native_dtype(ivy.as_ivy_dtype(obj.dtype.name))
 
-    elif isinstance(obj, (Number, bool)):
+    elif isinstance(obj, (Number, bool, complex)):
         if dtype is None:
             dtype = ivy.promote_types(type(obj), type(obj))
-        ret = paddle.full(shape=(), fill_value=obj).cast(dtype)
+        ret = paddle.to_tensor(obj,dtype=dtype).squeeze()
         return ret
 
     else:
